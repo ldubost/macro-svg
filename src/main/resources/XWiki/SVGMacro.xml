@@ -123,8 +123,8 @@ function editSVG(_page, _counter, _hashcode, _divid) {
     var height = window.innerHeight - 100
     var iframeHeight = height - 50
     
-    var iframeSrc = "$xwiki.getDocument('XWiki.SVGMacro').getAttachmentURL('svg-edit-2.6.zip')"
-        + "/svg-edit-2.6/svg-editor.html"
+    var iframeSrc = "$xwiki.getDocument('XWiki.SVGMacro').getAttachmentURL('svg-edit-2.7.1.zip')"
+        + "/svg-edit-2.7.1/svg-editor.html"
         + "?extensions=" + extensions.join(',')
 
     var iframeHTML = [
