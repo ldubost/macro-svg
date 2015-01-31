@@ -1,0 +1,747 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xwikidoc>
+  <web>XWiki</web>
+  <name>SVGMacro</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <parent>XWiki.WebHome</parent>
+  <creator>xwiki:XWiki.Admin</creator>
+  <author>xwiki:XWiki.Admin</author>
+  <customClass/>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <creationDate>1370627550000</creationDate>
+  <date>1370714256000</date>
+  <contentUpdateDate>1370712454000</contentUpdateDate>
+  <version>1.1</version>
+  <title/>
+  <template/>
+  <defaultTemplate/>
+  <validationScript/>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.0</syntaxId>
+  <hidden>false</hidden>
+  <object>
+    <class>
+      <name>XWiki.JavaScriptExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators> ,|</separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <disabled>0</disabled>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators> ,|</separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage=Always on this page|onDemand=On demand|always=Always on this wiki</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <name>XWiki.SVGMacro</name>
+    <number>0</number>
+    <className>XWiki.JavaScriptExtension</className>
+    <guid>fead0d35-1390-4994-a919-028f0e4ad976</guid>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>var extensions = ["ext-markers.js", "ext-connector.js", "ext-eyedropper.js", "ext-shapes.js", "ext-grid.js"]
+var svgdata = ""
+var page = ""
+var counter = 0
+var hashcode = 0
+var divid = ""
+var reloadNeeded = false
+var svgEditor = ""
+
+function editSVG(_page, _counter, _hashcode, _divid) {
+    page = _page
+    counter = _counter
+    hashcode = _hashcode
+    divid = _divid &lt; 0 ? -_divid : _divid
+
+    svgdata = $("svg-" + divid + "-content").value
+    var width = window.innerWidth - 100
+    var height = window.innerHeight - 100
+    var iframeHeight = height - 50
+    
+    var iframeSrc = "$xwiki.getDocument('XWiki.SVGMacro').getAttachmentURL('svg-edit-2.6.zip')"
+        + "/svg-edit-2.6/svg-editor.html"
+        + "?extensions=" + extensions.join(',')
+
+    var iframeHTML = [
+        '&lt;iframe',
+        'id="iframe"',
+        'onload="initSvgEditor(this.contentWindow.svgEditor);"',
+        'src="' + iframeSrc + '"',
+        'width="100%"', 
+        'height="' + iframeHeight + '"', 
+        '&gt;&lt;/iframe&gt;'
+    ].join(' ')
+
+    Modalbox.show(iframeHTML, {
+        width: width, 
+        height: height, 
+        title: "SVG Editor",
+        overlayClose: false,
+        slideDownDuration: 0.2,
+        slideUpDuration: 0.2,
+        afterHide: function() { 
+            if (reloadNeeded) window.location.reload()
+        },
+        beforeHide: function() {
+            if (confirm("Do you want to save changes?")) {
+                svgEditor.canvas.save()
+            }
+            return true
+        }
+    })
+}
+
+function initSvgEditor(_svgEditor) {
+    svgEditor = _svgEditor
+
+    //load image from the page
+    svgEditor.loadFromString(svgdata)
+    
+    //register handlers for saving image
+    svgEditor.addExtension("xwiki", {
+        callback: function() {
+            svgEditor.setCustomHandlers({
+                save: function(win, data) {
+                    parent.updateSVG(data)
+                },
+                pngsave: function(win, data) {
+                    alert("Not implemented!")
+                }
+            })
+        }
+    })
+
+    //remove useless menu items
+    var doc = $('iframe').contentWindow.document
+    var menuList = doc.getElementById('tool_open').parentNode
+    menuList.removeChild(doc.getElementById('tool_open'))
+    menuList.removeChild(doc.getElementById('tool_export'))
+
+    //remove link to project's homepage 'cause it looks ugly in the menu
+    var menu = doc.getElementById('main_menu')
+    menu.removeChild(menu.getElementsByTagName('p')[0])
+}
+
+function updateSVG(svgdata) {
+    var svgMessage = "svg-" + divid + "-message"
+
+    // ready to change the status on the server now
+    $(svgMessage).style.display = "none"
+    $(svgMessage).innerHTML = "Updating svg content"
+
+    var url = "$xwiki.getURL('XWiki.SVGMacroService')"
+    var params = [
+        "xpage=plain", 
+        "outputSyntax=plain", 
+        "page=" + page, 
+        "counter=" + counter, 
+        "svgdata=" + escape(svgdata), 
+        "hashcode=" + hashcode
+    ].join('&amp;')
+
+    var notify = function(transport) {
+        $(svgMessage).innerHTML = "SVG status result: " + transport.responseText
+
+        if (transport.responseText.indexOf('SUCCESS') != -1) {
+            // XWiki info message to announce the work is done
+            new XWiki.widgets.Notification("SVG Drawing has been saved", "done")
+            var hcode = transport.responseText.substring(transport.responseText.indexOf('SUCCESS') + 8)
+            hashcode = parseInt(hcode)
+            reloadNeeded = true
+        } else {
+            new XWiki.widgets.Notification("SVG Drawing failed to save", "error")
+        }
+    }
+    
+    var ajx = new Ajax.Request(url, {
+        method: 'POST',
+        parameters: params,
+        onComplete: notify
+    })
+}</code>
+    </property>
+    <property>
+      <name>Todo JS</name>
+    </property>
+    <property>
+      <parse>1</parse>
+    </property>
+    <property>
+      <use>onDemand</use>
+    </property>
+  </object>
+  <object>
+    <class>
+      <name>XWiki.StyleSheetExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators> ,|</separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <disabled>0</disabled>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators> ,|</separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage=Always on this page|onDemand=On demand|always=Always on this wiki</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <name>XWiki.SVGMacro</name>
+    <number>0</number>
+    <className>XWiki.StyleSheetExtension</className>
+    <guid>04ddf635-81b4-4a87-995a-7c085e112c0d</guid>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>.svg {
+ padding-top: 5px;
+ padding-bottom: 2px;
+ padding-left: 2px;
+ padding-right: 2px;
+}
+.xnotification-container {
+ z-index:12000 !important;
+}
+</code>
+    </property>
+    <property>
+      <name/>
+    </property>
+    <property>
+      <parse>0</parse>
+    </property>
+    <property>
+      <use>onDemand</use>
+    </property>
+  </object>
+  <object>
+    <class>
+      <name>XWiki.WikiMacroClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <code>
+        <disabled>0</disabled>
+        <name>code</name>
+        <number>9</number>
+        <prettyName>Macro code</prettyName>
+        <rows>20</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <contentDescription>
+        <disabled>0</disabled>
+        <name>contentDescription</name>
+        <number>8</number>
+        <prettyName>Content description (Not applicable for "No content" type)</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </contentDescription>
+      <contentType>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <multiSelect>0</multiSelect>
+        <name>contentType</name>
+        <number>7</number>
+        <prettyName>Macro content type</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator>|</separator>
+        <separators>|</separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>Optional|Mandatory|No content</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </contentType>
+      <defaultCategory>
+        <disabled>0</disabled>
+        <name>defaultCategory</name>
+        <number>4</number>
+        <prettyName>Default category</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </defaultCategory>
+      <description>
+        <disabled>0</disabled>
+        <name>description</name>
+        <number>3</number>
+        <prettyName>Macro description</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </description>
+      <id>
+        <disabled>0</disabled>
+        <name>id</name>
+        <number>1</number>
+        <prettyName>Macro id</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </id>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>2</number>
+        <prettyName>Macro name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <supportsInlineMode>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>supportsInlineMode</name>
+        <number>5</number>
+        <prettyName>Supports inline mode</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </supportsInlineMode>
+      <visibility>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <multiSelect>0</multiSelect>
+        <name>visibility</name>
+        <number>6</number>
+        <prettyName>Macro visibility</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator>|</separator>
+        <separators>|</separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>Current User|Current Wiki|Global</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </visibility>
+    </class>
+    <name>XWiki.SVGMacro</name>
+    <number>0</number>
+    <className>XWiki.WikiMacroClass</className>
+    <guid>0341c838-081e-4f7b-b188-fee8f8434818</guid>
+    <property>
+      <code>{{velocity filter="html"}}
+#set ($ok = $xwiki.jsfx.use('js/scriptaculous/scriptaculous.js'))
+#set ($ok = $xwiki.jsx.use('XWiki.ModalBox'))
+#set ($ok = $xwiki.ssx.use('XWiki.ModalBox'))
+#set ($ok = $xwiki.jsx.use('XWiki.SVGMacro'))
+#set ($ok = $xwiki.ssx.use('XWiki.SVGMacro'))
+
+#set ($content = $xcontext.macro.content)
+#set ($hashcode = $content.trim().hashCode())
+#set ($divid = $mathtool.abs($hashcode))
+
+#if ($content != '')
+    ## parse actual image size from the &lt;svg&gt; tag
+    ## a little bit ugly solution but more efficient than building DOM
+    #set ($svgtag = $stringtool.substringBetween($content, "&lt;svg", "&gt;"))
+    #set ($width = $stringtool.substringBetween($svgtag, 'width="', '"'))
+    #set ($height = $stringtool.substringBetween($svgtag, 'height="', '"'))
+    #if (!$width) #set ($width = 640) #end
+    #if (!$height) #set ($height = 480) #end
+#end
+
+#if ($svgcounter)
+    #set ($svgcounter = $svgcounter + 1)
+#else
+    #set ($svgcounter = 1)
+#end
+
+#if ("$!xcontext.macro.params.width" != '')
+    #set ($width = $xcontext.macro.params.width)
+#end
+
+#if ("$!xcontext.macro.params.height" != '')
+    #set ($height = $xcontext.macro.params.height)
+#end
+
+#if ($content != '')
+    ## rasterize SVG image
+    #set ($imagename = $xwiki.svg.writeSVGImage($content, 'png', $height, $width))
+    #set ($imageurl = $doc.getAttachmentURL($imagename, 'svg'))
+#end
+
+{{html clean="false"}}
+&lt;div id="svg-${divid}"&gt;
+    &lt;span id="svg-${divid}-buttons" class="svg-buttons"&gt;
+        &lt;a class="svg-edit" href="javascript:void(0)" onclick="editSVG('${doc.fullName}', $svgcounter, $hashcode, $divid); return false;"&gt;
+            &lt;img src="$xwiki.getSkinFile("icons/silk/pencil_add.png")" alt="edit" /&gt;
+        &lt;/a&gt;
+    &lt;/span&gt;
+    &lt;span id="svg-${divid}-message"&gt;&lt;/span&gt;
+    &lt;textarea id="svg-${divid}-content" class="svg-content" style="display: none"&gt;
+        $content
+    &lt;/textarea&gt;
+    &lt;div id="svg-${divid}-image" class="svg-image"&gt;
+        #if ($content != '')
+            &lt;img src="$imageurl" width="$width" height="$height" /&gt;
+        #end
+    &lt;/div&gt;
+&lt;/div&gt;
+{{/html}}
+{{/velocity}}</code>
+    </property>
+    <property>
+      <contentDescription>SVG Content; you can leave this empty and edit the image later in the WYSIWYG image editor.</contentDescription>
+    </property>
+    <property>
+      <contentType>Optional</contentType>
+    </property>
+    <property>
+      <defaultCategory>content</defaultCategory>
+    </property>
+    <property>
+      <description>Display an editable SVG image</description>
+    </property>
+    <property>
+      <id>svg</id>
+    </property>
+    <property>
+      <name>SVG</name>
+    </property>
+    <property>
+      <supportsInlineMode>1</supportsInlineMode>
+    </property>
+    <property>
+      <visibility>Current Wiki</visibility>
+    </property>
+  </object>
+  <object>
+    <class>
+      <name>XWiki.WikiMacroParameterClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <defaultValue>
+        <disabled>0</disabled>
+        <name>defaultValue</name>
+        <number>4</number>
+        <prettyName>Parameter default value</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </defaultValue>
+      <description>
+        <disabled>0</disabled>
+        <name>description</name>
+        <number>2</number>
+        <prettyName>Parameter description</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </description>
+      <mandatory>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>mandatory</name>
+        <number>3</number>
+        <prettyName>Parameter mandatory</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </mandatory>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Parameter name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+    </class>
+    <name>XWiki.SVGMacro</name>
+    <number>2</number>
+    <className>XWiki.WikiMacroParameterClass</className>
+    <guid>6d361ba2-9d8f-4417-a36b-2662136b890f</guid>
+    <property>
+      <defaultValue/>
+    </property>
+    <property>
+      <description>Width of the rendered image. If not set, actual width of the SVG image will be used.</description>
+    </property>
+    <property>
+      <mandatory>0</mandatory>
+    </property>
+    <property>
+      <name>width</name>
+    </property>
+  </object>
+  <object>
+    <class>
+      <name>XWiki.WikiMacroParameterClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <defaultValue>
+        <disabled>0</disabled>
+        <name>defaultValue</name>
+        <number>4</number>
+        <prettyName>Parameter default value</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </defaultValue>
+      <description>
+        <disabled>0</disabled>
+        <name>description</name>
+        <number>2</number>
+        <prettyName>Parameter description</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </description>
+      <mandatory>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>mandatory</name>
+        <number>3</number>
+        <prettyName>Parameter mandatory</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </mandatory>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Parameter name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+    </class>
+    <name>XWiki.SVGMacro</name>
+    <number>3</number>
+    <className>XWiki.WikiMacroParameterClass</className>
+    <guid>578a3879-2b47-445c-a97f-0a1a4d57778d</guid>
+    <property>
+      <defaultValue/>
+    </property>
+    <property>
+      <description>Height of the rendered image. If not set, actual height of the SVG image will be used.</description>
+    </property>
+    <property>
+      <mandatory>0</mandatory>
+    </property>
+    <property>
+      <name>height</name>
+    </property>
+  </object>
+  <object>
+    <class>
+      <name>XWiki.WikiMacroParameterClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <defaultValue>
+        <disabled>0</disabled>
+        <name>defaultValue</name>
+        <number>4</number>
+        <prettyName>Parameter default value</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </defaultValue>
+      <description>
+        <disabled>0</disabled>
+        <name>description</name>
+        <number>2</number>
+        <prettyName>Parameter description</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </description>
+      <mandatory>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>mandatory</name>
+        <number>3</number>
+        <prettyName>Parameter mandatory</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </mandatory>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Parameter name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+    </class>
+    <name>XWiki.SVGMacro</name>
+    <number>4</number>
+    <className>XWiki.WikiMacroParameterClass</className>
+    <guid>19974b63-1810-4ad8-801c-5164006be167</guid>
+    <property>
+      <defaultValue/>
+    </property>
+    <property>
+      <description>Force Image mode even when browser supports SVG</description>
+    </property>
+    <property>
+      <mandatory>0</mandatory>
+    </property>
+    <property>
+      <name>forceimage</name>
+    </property>
+  </object>
+  <content>You should see an SVG Drawing below and you can edit it by clicking on the edit icon:
+
+{{svg width="640" height="480"}}&lt;svg width="640" height="480" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg"&gt;
+ &lt;g&gt;
+  &lt;title&gt;Layer 1&lt;/title&gt;
+  &lt;rect transform="rotate(-21.6429, 404.098, 249.602)" stroke-width="5" stroke="#000000" fill="#aa0000" id="svg_1" height="153" width="338.999993" y="173.100008" x="234.599169"/&gt;
+  &lt;text x="374.6" y="242.1" id="svg_2" fill="#000000" stroke="#000000" stroke-width="0" font-size="24" font-family="serif" text-anchor="middle" xml:space="preserve" transform="matrix(1, 0, 0, 1, 27, 10)"&gt;This is an SVG Drawing&lt;/text&gt;
+ &lt;/g&gt;
+&lt;/svg&gt;{{/svg}}</content>
+</xwikidoc>

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xwikidoc>
+  <web>XWiki</web>
+  <name>SVGMacroGroovy</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <parent>XWiki.SVGMacro</parent>
+  <creator>xwiki:XWiki.Admin</creator>
+  <author>xwiki:XWiki.Admin</author>
+  <customClass/>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <creationDate>1370627551000</creationDate>
+  <date>1370627551000</date>
+  <contentUpdateDate>1370627551000</contentUpdateDate>
+  <version>1.1</version>
+  <title/>
+  <template/>
+  <defaultTemplate/>
+  <validationScript/>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.0</syntaxId>
+  <hidden>true</hidden>
+  <content>/*
+#*
+SVGMacroGroovy
+
+*#
+*/
+
+import org.xwiki.rendering.block.*;
+import org.xwiki.rendering.renderer.*;
+import org.xwiki.rendering.syntax.*;
+import org.xwiki.rendering.parser.*;
+import org.xwiki.rendering.renderer.printer.DefaultWikiPrinter;
+import org.xwiki.rendering.renderer.printer.WikiPrinter;
+import com.xpn.xwiki.web.Utils;
+import com.xpn.xwiki.api.*;
+import java.util.*;
+import java.lang.reflect.*;
+
+
+public class SVGMacroGroovy {
+   def xwiki;
+   def context;
+
+   public setContext(context, xwiki) {
+      this.xwiki = xwiki;
+      this.context = context;
+   }
+
+   public int updateDocumentXDOM(xdom, hashcode, newcontent) {
+      def xdomchanged = false;
+      // Finding Macro Block
+      List&lt;MacroBlock&gt; macroBlocks = xdom.getChildrenByType(MacroBlock.class, true);
+      for (MacroBlock macroBlock : macroBlocks) {
+        def id = macroBlock.getId();
+        if (id.equals("svg")) {
+     
+        def currentContent = macroBlock.getContent();   
+        currentContent = (currentContent==null) ? "" : currentContent;
+
+        def str = currentContent;
+        def currentHashcode = str.trim().hashCode();
+
+        System.out.println("str: " + str);       
+        System.out.println("hashcode: " + hashcode);       
+        System.out.println("current hashcode: " + currentHashcode);       
+
+        if ("$hashcode"=="$currentHashcode") {
+           System.out.println("found macro");
+           boolean done = true;
+
+           if (currentContent!=newcontent) {
+             currentContent = newcontent;
+
+             // We need to use reflection until this exists: macroBlock.setContent(newcontent);
+             Field field = macroBlock.getClass().getDeclaredField("content");
+             field.setAccessible(true);
+             field.set(macroBlock, newcontent);
+
+             done = true;
+           }       
+
+           if (done==true) {
+             def newstr = currentContent;
+             def hc = newstr.trim().hashCode();
+             return hc;         
+           } 
+         }
+        }
+      }
+      return 0;
+   }
+
+   public String getContentFromXDOM(xdom) {
+     WikiPrinter printer = new DefaultWikiPrinter();
+     BlockRenderer renderer = (BlockRenderer) Utils.getComponent(BlockRenderer.class, Syntax.XWIKI_2_0.toIdString());
+     renderer.render(xdom, printer);
+     return printer.toString();
+   }
+
+   public XDOM getXDOMFromContent(content) {
+     Parser parser = (Parser) Utils.getComponent(Parser.class, Syntax.XWIKI_2_0.toIdString());
+     return parser.parse(new StringReader(content));
+   }
+ 
+   public int updateDocument(doc, hashcode, newcontent) {
+      XDOM xdom = (doc == null) ? null : doc.getDocument().getXDOM();
+      xdom = (xdom == null) ? null : xdom.clone();
+       
+      def result = updateDocumentXDOM(xdom, hashcode, newcontent);
+
+      // we updated the xdom, apply it
+      if (result!=0) {
+         doc.setContent(getContentFromXDOM(xdom));
+         return result;
+      }
+
+      // adding svgs stored in objects
+      for (objs in doc.getxWikiObjects().values()) {
+        for (obj in objs) {
+          doc.use(obj);
+          for (propname in obj.getxWikiClass().getPropertyNames()) {
+             def content = doc.getValue(propname).toString();
+             if (content!=null) {
+              xdom = getXDOMFromContent(content); 
+              result = updateDocumentXDOM(xdom, hashcode, newcontent);      
+              if (result!=0) {
+                doc.set(propname, getContentFromXDOM(xdom));
+                return result;
+              }
+             }
+          }
+        }
+      }
+
+      return 0;
+   }
+
+   public int getHashCode(data) {
+     return data.trim().hashCode();
+   }
+}</content>
+</xwikidoc>
